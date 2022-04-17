@@ -22,9 +22,10 @@ def charge():
             if "frmRedirect" in login_result.text:
                 return {"result": False, "amount": 0, "reason": "아이디 또는 비밀번호 불일치", "timeout": round((time() - current_time) * 1000)}
 
-            client.cookies.set("appInfoConfig", '"cookieClientType=IPHONE&cookieKeepLoginYN=F"')
             client.get("https://m.cultureland.co.kr/csh/cshGiftCard.do")
-            client.post("https://m.cultureland.co.kr/csh/cshGiftCardProcess.do", data={"scr11": pin[0], "scr12": pin[1], "scr13": pin[2], "scr14": pin[3]})
+            mtk = mTransKey(client, "https://m.cultureland.co.kr/transkeyServlet")
+            pin_encrypt = mtk.new_keypad("number", "txtScr14", "scr14", "password").encrypt_password(pin[3])
+            client.post("https://m.cultureland.co.kr/csh/cshGiftCardProcess.do", data={"scr11": pin[0], "scr12": pin[1], "scr13": pin[2], "transkeyUuid": mtk.get_uuid(), "transkey_txtScr14": pin_encrypt, "transkey_HM_txtScr14": mtk.hmac_digest(pin_encrypt.encode())})
             charge_result = client.get("https://m.cultureland.co.kr/csh/cshGiftCardCfrm.do")
 
             charge_amount = charge_result.text.split('walletChargeAmt" value="')[1].split("\n\n\n")[0]
