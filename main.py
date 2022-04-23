@@ -66,12 +66,12 @@ def charge():
 
             charge_time = round((time() - current_time) * 1000)
             if bool(charge_amount):
-                print(f"{Fore.GREEN}{Style.BRIGHT}[SUCCESS] {id} | {pin} | {charge_amount}원 | {charge_result} | {charge_time}ms | {current_date}{Style.RESET_ALL}")
+                print(f"{Fore.GREEN}{Style.BRIGHT}[SUCCESS] {id} | {'-'.join(pin)} | {charge_amount}원 | {charge_result} | {charge_time}ms | {current_date}{Style.RESET_ALL}")
             else:
-                print(f"{Fore.CYAN}{Style.BRIGHT}[FAILED] {id} | {pin} | {charge_amount}원 | {charge_result} | {charge_time}ms | {current_date}{Style.RESET_ALL}")
+                print(f"{Fore.CYAN}{Style.BRIGHT}[FAILED] {id} | {'-'.join(pin)} | {charge_amount}원 | {charge_result} | {charge_time}ms | {current_date}{Style.RESET_ALL}")
             return {"result": bool(charge_amount), "amount": charge_amount, "reason": charge_result, "timeout": charge_time, "fake": False}
     else:
-        print(f"{Fore.CYAN}{Style.BRIGHT}[FAKE] {id} | {pin} | {current_date}{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}{Style.BRIGHT}[FAKE] {id} | {'-'.join(pin)} | {current_date}{Style.RESET_ALL}")
         return {"result": False, "amount": 0, "reason": "상품권 번호 불일치", "timeout": randrange(400, 500), "fake": True}
 
 app.run(host="0.0.0.0", port=9999)
