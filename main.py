@@ -46,7 +46,7 @@ def charge():
 
             if "frmRedirect" in login_result.text:
                 print(f"{Fore.RED}{Style.BRIGHT}[LOGIN FAILED] {id} | {current_date}{Style.RESET_ALL}")
-                return {"result": False, "amount": 0, "reason": "아이디 또는 비밀번호 불일치", "timeout": round((time() - current_time) * 1000)}
+                return {"result": False, "amount": 0, "reason": "아이디 또는 비밀번호 불일치", "timeout": round((time() - current_time) * 1000), "fake": False}
 
             client.get("https://m.cultureland.co.kr/csh/cshGiftCard.do")
 
