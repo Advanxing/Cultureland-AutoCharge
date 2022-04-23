@@ -4,7 +4,6 @@ from mTransKey.transkey import mTransKey
 from colorama import init, Fore, Style
 from datetime import datetime
 from flask import Flask, request
-from hashlib import sha256
 from json import load
 from random import randrange
 from time import time
