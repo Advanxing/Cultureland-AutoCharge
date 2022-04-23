@@ -1,6 +1,8 @@
 {
     "id": {
-        "pw": "pw",
-        "keepLoginInfo": "keepLoginInfo"
+        "pw": "",
+        "keepLoginInfo": "",
+		"userKey": 0,
+		"phone": ""
     }
 }
