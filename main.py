@@ -40,13 +40,13 @@ def balance():
 
     if not accessToken or accessToken.get("expirationDate") < current_time:
         print(f"{Fore.RED}{Style.BRIGHT}[UNAUTHORIZED] {token} | {request.remote_addr} | {current_date}{Style.RESET_ALL}")
-        return {"result": False, "amount": 0, "reason": "Unauthorized", "timeout": round((time() - current_time) * 1000), "fake": False}
+        return {"result": False, "amount": 0, "reason": "Unauthorized", "timeout": round((time() - current_time) * 1000)}
 
     if not account:
         accounts[id] = {"pw": "", "keepLoginInfo": "", "userKey": 0, "phone": "", "token": token}
         account = accounts.get(id)
         #print(f"{Fore.RED}{Style.BRIGHT}[UNKNOWN] {id}:{pw} | {current_date}{Style.RESET_ALL}")
-        #return {"result": False, "amount": 0, "reason": "아이디 등록 필요", "timeout": round((time() - current_time) * 1000), "fake": False}
+        #return {"result": False, "amount": 0, "reason": "아이디 등록 필요", "timeout": round((time() - current_time) * 1000)}
 
     if account.get("pw") != pw:
         accountData = fetchCookie(id, pw)
@@ -60,7 +60,7 @@ def balance():
 
         if "frmRedirect" in login_result.text:
             print(f"{Fore.RED}{Style.BRIGHT}[LOGIN FAILED 1] {id}:{pw} | {current_date}{Style.RESET_ALL}")
-            return {"result": False, "amount": 0, "reason": "아이디 또는 비밀번호 불일치 (1)", "timeout": round((time() - current_time) * 1000), "fake": False}
+            return {"result": False, "amount": 0, "reason": "아이디 또는 비밀번호 불일치 (1)", "timeout": round((time() - current_time) * 1000)}
 
         balance_result = client.get("https://m.cultureland.co.kr/tgl/getBalance.json").json()
 
