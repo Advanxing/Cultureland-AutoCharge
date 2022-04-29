@@ -15,9 +15,7 @@ accounts = {}
 with open("./accounts.json", "r") as f:
     accounts = load(f)
 
-altChars = {}
-with open("./specialCharacters.json", "r", encoding="utf8") as f:
-    altChars = load(f)
+altChars = {"~": "물결표시", "@": "골뱅이", "$": "달러기호", "^": "꺽쇠", "*": "별표", "(": "왼쪽괄호", ")": "오른쪽괄호", "_": "밑줄", "+": "더하기"}
 
 getLogger("werkzeug").disabled = True
 
