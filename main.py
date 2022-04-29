@@ -76,7 +76,8 @@ def charge():
                 else:
                     page.click(f"[alt='{char}']")
 
-            page.click("[alt='입력완료']")
+            if len(pw) < 12:
+                page.click("[alt='입력완료']")
             page.click("#chkKeepLogin")
 
             captchaTask = httpx.get("http://2captcha.com/res.php?key=f54b2ff707c7fd6ba3b960ac37b6c004&action=get&id=" + taskId).text
