@@ -15,6 +15,10 @@ accounts = {}
 with open("./accounts.json", "r") as f:
     accounts = load(f)
 
+accessTokens = {}
+with open("./accessTokens.json", "r", encoding="utf-8") as f:
+    accessTokens = load(f)
+
 altChars = {"~": "물결표시", "@": "골뱅이", "$": "달러기호", "^": "꺽쇠", "*": "별표", "(": "왼쪽괄호", ")": "오른쪽괄호", "_": "밑줄", "+": "더하기"}
 
 getLogger("werkzeug").disabled = True
@@ -30,10 +34,16 @@ def charge():
     req_data = request.get_json()
     id = req_data.get("id")
     pw = req_data.get("pw")
+    token = req_data.get("token")
     account = accounts.get(id)
+    accessToken = accessTokens.get(token)
+
+    if not accessToken or accessToken.get("expirationDate") < current_time:
+        print(f"{Fore.RED}{Style.BRIGHT}[UNAUTHORIZED] {token} | {request.remote_addr} | {current_date}{Style.RESET_ALL}")
+        return {"result": False, "amount": 0, "reason": "Unauthorized", "timeout": round((time() - current_time) * 1000), "fake": False}
 
     if not account:
-        accounts[id] = {"pw": "", "keepLoginInfo": "", "userKey": 0, "phone": ""}
+        accounts[id] = {"pw": "", "keepLoginInfo": "", "userKey": 0, "phone": "", "token": token}
         account = accounts.get(id)
         #print(f"{Fore.RED}{Style.BRIGHT}[UNKNOWN] {id}:{pw} | {current_date}{Style.RESET_ALL}")
         #return {"result": False, "amount": 0, "reason": "아이디 등록 필요", "timeout": round((time() - current_time) * 1000), "fake": False}
@@ -86,23 +96,26 @@ def charge():
                 if resp.value.status != 302:
                     print(f"{Fore.RED}{Style.BRIGHT}[LOGIN FAILED 1] {id}:{pw} | {current_date}{Style.RESET_ALL}")
                     return {"result": False, "amount": 0, "reason": "아이디 또는 비밀번호 불일치 (1)", "timeout": round((time() - current_time) * 1000), "fake": False}
-                keepLoginInfo = parse.unquote(resp.value.all_headers().get("set-cookie").split("KeepLoginConfig=")[1].split(';')[0])
 
-            with page.expect_response("https://m.cultureland.co.kr/tgl/flagSecCash.json") as resp:
-                respJson = resp.value.json()
+                responseCookies = resp.value.all_headers().get("set-cookie")
+                keepLoginInfo = parse.unquote(responseCookies.split("KeepLoginConfig=")[1].split(";")[0])
+                sessionId = responseCookies.split("JSESSIONID=")[1].split(";")[0]
 
             browser.close()
 
-            _phoneNumber = respJson.get("Phone")
+            accountData = httpx.post("https://m.cultureland.co.kr/tgl/flagSecCash.json", cookies={"JSESSIONID": sessionId}).json()
+
+            _phoneNumber = accountData.get("Phone")
             phoneNumber = ""
-            for i in range(0, len(_phoneNumber)):
-                if i == 3 or i == 7:
-                    phoneNumber += "-"
-                phoneNumber += _phoneNumber[i]
+            if _phoneNumber:
+                for i in range(0, len(_phoneNumber)):
+                    if i == 3 or i == 7:
+                        phoneNumber += "-"
+                    phoneNumber += _phoneNumber[i]
 
             accounts[id]["pw"] = pw
             accounts[id]["keepLoginInfo"] = keepLoginInfo
-            accounts[id]["userKey"] = int(respJson.get("userKey"))
+            accounts[id]["userKey"] = int(accountData.get("userKey"))
             accounts[id]["phone"] = phoneNumber
 
             with open("accounts.json", "w") as f:

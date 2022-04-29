@@ -2,7 +2,8 @@
     "id": {
         "pw": "",
         "keepLoginInfo": "",
-        "userKey": 0,
-        "phone": ""
+		"userKey": 0,
+		"phone": "",
+        "token": ""
     }
 }
