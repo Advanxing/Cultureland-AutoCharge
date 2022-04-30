@@ -176,14 +176,20 @@ def gift():
         client.get("https://m.cultureland.co.kr/gft/gftPhoneApp.do")
 
         client.post("https://m.cultureland.co.kr/gft/gftPhoneCashProc.do", data={"revEmail": "", "sendType": "S", "userKey": account.get("userKey"), "limitGiftBank": "N", "giftCategory": "M", "amount": amount, "quantity": 1, "revPhone": account.get("phone").replace("-", ""), "sendTitl": "", "paymentType": "cash"})
-        gift_result = client.get("https://m.cultureland.co.kr/gft/gftPhoneCfrm.do").text.split("- 상품권 바로 충전 : https://m.cultureland.co.kr/csh/dc.do?code=")[1].split("&lt;br&gt;")
+        gift_result = client.get("https://m.cultureland.co.kr/gft/gftPhoneCfrm.do").text
+
+        if '<p>선물(구매)하신 <strong class="point">모바일문화상품권</strong>을<br /><strong class="point">요청하신 정보로 전송</strong>하였습니다.</p>' not in gift_result:
+            print(f"{Fore.CYAN}{Style.BRIGHT}[GIFT FAILED] {id} | {amount}원 | {current_date}{Style.RESET_ALL}")
+            return {"result": False, "amount": 0, "reason": "선물(구매)가 실패하였습니다", "timeout": round((time() - current_time) * 1000)}
+
+        gift_result = gift_result.split("- 상품권 바로 충전 : https://m.cultureland.co.kr/csh/dc.do?code=")[1].split("&lt;br&gt;")
 
         gift_code = gift_result[0]
         gift_pin = gift_result[8].replace("- 바코드번호 : ", "")
 
         gift_time = round((time() - current_time) * 1000)
         print(f"{Fore.GREEN}{Style.BRIGHT}[GIFT SUCCESS] {id} | {amount}원 | {gift_pin} | {gift_time}ms | {current_date}{Style.RESET_ALL}")
-        return {"result": True, "amount": int(amount), "data": {"code": gift_code, "pin": gift_pin}, "timeout": gift_time}
+        return {"result": True, "amount": int(amount), "reason": "선물(구매)하신 모바일문화상품권을 요청하신 정보로 전송하였습니다", "data": {"code": gift_code, "pin": gift_pin}, "timeout": gift_time}
 
 def fetchCookie(id, pw):
     with sync_playwright() as p:
