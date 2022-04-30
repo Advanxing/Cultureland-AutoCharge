@@ -66,7 +66,7 @@ def balance():
         my_cash = balance_result.get("myCash")
         balance_time = round((time() - current_time) * 1000)
 
-        print(f"{Fore.GREEN}{Style.BRIGHT}[SUCCESS] {id} | {my_cash}원 | {balance_time}ms | {current_date}{Style.RESET_ALL}")
+        print(f"{Fore.GREEN}{Style.BRIGHT}[BALANCE SUCCESS] {id} | {my_cash}원 | {balance_time}ms | {current_date}{Style.RESET_ALL}")
         return {"result": True, "amount": int(my_cash), "timeout": balance_time}
 
 @app.route("/api/charge", methods=["POST"])
@@ -129,13 +129,61 @@ def charge():
 
             charge_time = round((time() - current_time) * 1000)
             if bool(charge_amount):
-                print(f"{Fore.GREEN}{Style.BRIGHT}[SUCCESS] {id} | {'-'.join(pin)} | {charge_amount}원 | {charge_result} | {charge_time}ms | {current_date}{Style.RESET_ALL}")
+                print(f"{Fore.GREEN}{Style.BRIGHT}[CHARGE SUCCESS] {id} | {'-'.join(pin)} | {charge_amount}원 | {charge_result} | {charge_time}ms | {current_date}{Style.RESET_ALL}")
             else:
                 print(f"{Fore.CYAN}{Style.BRIGHT}[FAILED] {id} | {'-'.join(pin)} | {charge_amount}원 | {charge_result} | {charge_time}ms | {current_date}{Style.RESET_ALL}")
             return {"result": bool(charge_amount), "amount": charge_amount, "reason": charge_result, "timeout": charge_time, "fake": False}
     else:
         print(f"{Fore.CYAN}{Style.BRIGHT}[FAKE] {id} | {'-'.join(pin)} | {current_date}{Style.RESET_ALL}")
         return {"result": False, "amount": 0, "reason": "상품권 번호 불일치", "timeout": randrange(400, 500), "fake": True}
+
+@app.route("/api/gift", methods=["POST"])
+def gift():
+    current_date = datetime.now().strftime("%B %d, %Y %H:%M:%S")
+    current_time = time()
+    req_data = request.get_json()
+    id = req_data.get("id")
+    pw = req_data.get("pw")
+    amount = req_data.get("amount")
+    token = req_data.get("token")
+    account = accounts.get(id)
+    accessToken = accessTokens.get(token)
+
+    if not accessToken or accessToken.get("expirationDate") < current_time:
+        print(f"{Fore.RED}{Style.BRIGHT}[UNAUTHORIZED] {token} | {request.remote_addr} | {current_date}{Style.RESET_ALL}")
+        return {"result": False, "amount": 0, "reason": "Unauthorized", "timeout": round((time() - current_time) * 1000), "fake": False}
+
+    if not account:
+        accounts[id] = {"pw": "", "keepLoginInfo": "", "userKey": 0, "phone": "", "token": token}
+        account = accounts.get(id)
+        #print(f"{Fore.RED}{Style.BRIGHT}[UNKNOWN] {id}:{pw} | {current_date}{Style.RESET_ALL}")
+        #return {"result": False, "amount": 0, "reason": "아이디 등록 필요", "timeout": round((time() - current_time) * 1000), "fake": False}
+
+    if account.get("pw") != pw:
+        accountData = fetchCookie(id, pw)
+        if not accountData.get("result"):
+            return accountData
+
+    with httpx.Client() as client:
+        keepLoginInfo = account.get("keepLoginInfo")
+        client.cookies.set("KeepLoginConfig", parse.quote(keepLoginInfo))
+        login_result = client.post("https://m.cultureland.co.kr/mmb/loginProcess.do", data={"keepLoginInfo": keepLoginInfo})
+
+        if "frmRedirect" in login_result.text:
+            print(f"{Fore.RED}{Style.BRIGHT}[LOGIN FAILED 1] {id}:{pw} | {current_date}{Style.RESET_ALL}")
+            return {"result": False, "amount": 0, "reason": "아이디 또는 비밀번호 불일치 (1)", "timeout": round((time() - current_time) * 1000)}
+
+        client.get("https://m.cultureland.co.kr/gft/gftPhoneApp.do")
+
+        client.post("https://m.cultureland.co.kr/gft/gftPhoneCashProc.do", data={"revEmail": "", "sendType": "S", "userKey": account.get("userKey"), "limitGiftBank": "N", "giftCategory": "M", "amount": amount, "quantity": 1, "revPhone": account.get("phone").replace("-", ""), "sendTitl": "", "paymentType": "cash"})
+        gift_result = client.get("https://m.cultureland.co.kr/gft/gftPhoneCfrm.do").text.split("- 상품권 바로 충전 : https://m.cultureland.co.kr/csh/dc.do?code=")[1].split("&lt;br&gt;")
+
+        gift_code = gift_result[0]
+        gift_pin = gift_result[8].replace("- 바코드번호 : ", "")
+
+        gift_time = round((time() - current_time) * 1000)
+        print(f"{Fore.GREEN}{Style.BRIGHT}[GIFT SUCCESS] {id} | {amount}원 | {gift_pin} | {gift_time}ms | {current_date}{Style.RESET_ALL}")
+        return {"result": True, "amount": int(amount), "data": {"code": gift_code, "pin": gift_pin}, "timeout": gift_time}
 
 def fetchCookie(id, pw):
     with sync_playwright() as p:
