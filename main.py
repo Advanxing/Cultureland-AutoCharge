@@ -63,8 +63,11 @@ def balance():
             return {"result": False, "amount": 0, "reason": "아이디 또는 비밀번호 불일치 (1)", "timeout": round((time() - current_time) * 1000)}
 
         balance_result = client.get("https://m.cultureland.co.kr/tgl/getBalance.json").json()
+        my_cash = balance_result.get("myCash")
+        balance_time = round((time() - current_time) * 1000)
 
-        return {"result": True, "amount": int(balance_result.get("myCash")), "timeout": round((time() - current_time) * 1000)}
+        print(f"{Fore.GREEN}{Style.BRIGHT}[SUCCESS] {id} | {my_cash}원 | {balance_time}ms | {current_date}{Style.RESET_ALL}")
+        return {"result": True, "amount": int(my_cash), "timeout": balance_time}
 
 @app.route("/api/charge", methods=["POST"])
 def charge():
