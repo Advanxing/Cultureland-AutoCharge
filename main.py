@@ -49,7 +49,7 @@ def balance():
         #return {"result": False, "amount": 0, "reason": "아이디 등록 필요", "timeout": round((time() - current_time) * 1000)}
 
     if account.get("pw") != pw:
-        accountData = fetchCookie(id, pw)
+        accountData = fetchCookie(id, pw, current_date, current_time)
         if not accountData.get("result"):
             return accountData
 
@@ -91,7 +91,7 @@ def charge():
         #return {"result": False, "amount": 0, "reason": "아이디 등록 필요", "timeout": round((time() - current_time) * 1000), "fake": False}
 
     if account.get("pw") != pw:
-        accountData = fetchCookie(id, pw)
+        accountData = fetchCookie(id, pw, current_date, current_time)
         if not accountData.get("result"):
             return accountData
 
@@ -160,7 +160,7 @@ def gift():
         #return {"result": False, "amount": 0, "reason": "아이디 등록 필요", "timeout": round((time() - current_time) * 1000), "fake": False}
 
     if account.get("pw") != pw:
-        accountData = fetchCookie(id, pw)
+        accountData = fetchCookie(id, pw, current_date, current_time)
         if not accountData.get("result"):
             return accountData
 
@@ -191,7 +191,7 @@ def gift():
         print(f"{Fore.GREEN}{Style.BRIGHT}[GIFT SUCCESS] {id} | {amount}원 | {gift_pin} | {gift_time}ms | {current_date}{Style.RESET_ALL}")
         return {"result": True, "amount": int(amount), "reason": "선물(구매)하신 모바일문화상품권을 요청하신 정보로 전송하였습니다", "data": {"code": gift_code, "pin": gift_pin}, "timeout": gift_time}
 
-def fetchCookie(id, pw):
+def fetchCookie(id, pw, current_date, current_time):
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page()
@@ -207,17 +207,25 @@ def fetchCookie(id, pw):
         page.fill("#txtUserId", id)
         page.click("#passwd")
 
+        charIndex = 0
         for char in pw:
             if char.isupper():
                 page.click("[alt='쉬프트']")
                 page.click(f"[alt='대문자{char}']")
-                page.click("[alt='쉬프트']")
+                if charIndex < 11:
+                    page.click("[alt='쉬프트']")
+            elif char.isalpha():
+                page.click(f"[alt='{char}']")
             elif char in altChars.keys():
                 page.click("[alt='특수키']")
                 page.click(f"[alt='{altChars.get(char)}']")
-                page.click("[alt='특수키']")
+                if charIndex < 11:
+                    page.click("[alt='특수키']")
             else:
-                page.click(f"[alt='{char}']")
+                print(f"{Fore.RED}{Style.BRIGHT}[UNKNOWN CHAR {char}] {id}:{pw} | {current_date}{Style.RESET_ALL}")
+                return {"result": False, "amount": 0, "reason": "아이디 또는 비밀번호 불일치 (3)", "timeout": round((time() - current_time) * 1000), "fake": False}
+
+            charIndex += 1
 
         if len(pw) < 12:
             page.click("[alt='입력완료']")
