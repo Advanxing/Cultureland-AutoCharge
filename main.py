@@ -214,7 +214,7 @@ def fetchCookie(id, pw, current_date, current_time):
                 page.click(f"[alt='대문자{char}']")
                 if charIndex < 11:
                     page.click("[alt='쉬프트']")
-            elif char.isalpha():
+            elif char.isalpha() or char.isdigit():
                 page.click(f"[alt='{char}']")
             elif char in altChars.keys():
                 page.click("[alt='특수키']")
