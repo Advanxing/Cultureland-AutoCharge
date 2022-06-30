@@ -69,6 +69,44 @@ def balance():
         print(f"{Fore.GREEN}{Style.BRIGHT}[BALANCE SUCCESS] {id} | {my_cash}원 | {balance_time}ms | {current_date}{Style.RESET_ALL}")
         return {"result": True, "amount": int(my_cash), "timeout": balance_time}
 
+@app.route("/api/check", methods=["POST"])
+def check():
+    current_date = datetime.now().strftime("%B %d, %Y %H:%M:%S")
+    current_time = time()
+    req_data = request.get_json()
+    token = req_data.get("token")
+    accessToken = accessTokens.get(token)
+
+    if not accessToken or accessToken.get("expirationDate") < current_time:
+        print(f"{Fore.RED}{Style.BRIGHT}[UNAUTHORIZED] {token} | {request.remote_addr} | {current_date}{Style.RESET_ALL}")
+        return {"result": False, "amount": 0, "reason": "Unauthorized", "timeout": round((time() - current_time) * 1000)}
+
+    pin = req_data.get("pin").split("-")
+    if len(pin) == 4:
+        voucherData = httpx.post("https://www.cultureland.co.kr/voucher/getVoucherCheckMobileUsed.do", data={"code": "-".join(pin)}).json()
+        resultCd = int(voucherData.get("resultCd"))
+        resultMsg = voucherData.get("resultMsg")
+        resultOther = voucherData.get("resultOther")
+
+        if resultCd == 0:
+            if len(resultOther) == 0:
+                print(f"{Fore.CYAN}{Style.BRIGHT}[CHECK FAKE 1] {'-'.join(pin)} | 올바른 상품권 번호를 입력해 주세요 | {current_date}{Style.RESET_ALL}")
+                return {"result": False, "amount": 0, "data": voucherData, "reason": "올바른 상품권 번호를 입력해 주세요", "timeout": round((time() - current_time) * 1000)}
+            else:
+                amount = resultOther[0].get("Balance")
+                reason = "조회 완료" if bool(amount) else "잔액이 0원인 상품권"
+                print(f"{Fore.GREEN}{Style.BRIGHT}[CHECK 0] {'-'.join(pin)} | {reason} | {current_date}{Style.RESET_ALL}")
+                return {"result": bool(amount), "amount": amount, "data": voucherData, "reason": reason, "timeout": round((time() - current_time) * 1000)}
+        elif resultCd == 1:
+            print(f"{Fore.RED}{Style.BRIGHT}[CHECK ERROR] {'-'.join(pin)} | {resultMsg} | {current_date}{Style.RESET_ALL}")
+            return {"result": False, "amount": 0, "data": voucherData, "reason": resultMsg, "timeout": round((time() - current_time) * 1000)}
+        else:
+            print(f"{Fore.RED}{Style.BRIGHT}[CHECK {resultCd}] {'-'.join(pin)} | Unknown Result Code | {current_date}{Style.RESET_ALL}")
+            return {"result": False, "amount": 0, "data": voucherData, "reason": "Unknown Result Code " + resultCd, "timeout": round((time() - current_time) * 1000)}
+    else:
+        print(f"{Fore.CYAN}{Style.BRIGHT}[CHECK FAKE 2] {'-'.join(pin)} | {current_date}{Style.RESET_ALL}")
+        return {"result": False, "amount": 0, "reason": "올바른 상품권 번호를 입력해 주세요", "timeout": randrange(50, 200)}
+
 @app.route("/api/charge", methods=["POST"])
 def charge():
     current_date = datetime.now().strftime("%B %d, %Y %H:%M:%S")
@@ -103,6 +141,25 @@ def charge():
 
             #login_result = client.post("https://m.cultureland.co.kr/mmb/loginProcess.do", data={"userId": req_data.get("id"), "transkeyUuid": mtk.get_uuid(), "transkey_passwd": pw_encrypt, "transkey_HM_passwd": mtk.hmac_digest(pw_encrypt.encode())})
 
+            if req_data.get("check") and len(pin[3]) == 4:
+                voucherData = httpx.post("https://www.cultureland.co.kr/voucher/getVoucherCheckMobileUsed.do", data={"code": "-".join(pin)}).json()
+                resultCd = int(voucherData.get("resultCd"))
+                resultOther = voucherData.get("resultOther")
+
+                charge_time = round((time() - current_time) * 1000)
+                if resultCd == 0:
+                    if len(resultOther) == 0:
+                        print(f"{Fore.CYAN}{Style.BRIGHT}[FAKE 2] {id} | {'-'.join(pin)} | 0원 | 상품권 번호 불일치 | {charge_time}ms | {current_date}{Style.RESET_ALL}")
+                        return {"result": False, "amount": 0, "reason": "상품권 번호 불일치", "timeout": charge_time, "fake": True}
+                    else:
+                        amount = resultOther[0].get("Balance")
+                        if not bool(amount):
+                            print(f"{Fore.CYAN}{Style.BRIGHT}[FAKE 3] {id} | {'-'.join(pin)} | 0원 | 잔액이 0원인 상품권 | {charge_time}ms | {current_date}{Style.RESET_ALL}")
+                            return {"result": False, "amount": 0, "reason": "잔액이 0원인 상품권", "timeout": charge_time, "fake": True}
+                elif resultCd != 1:
+                    print(f"{Fore.RED}{Style.BRIGHT}[CHARGE FAIL {resultCd}] {id} | {'-'.join(pin)} | 0원 | Unknown Result Code | {charge_time}ms | {current_date}{Style.RESET_ALL}")
+                    return {"result": False, "amount": 0, "reason": "Unknown Result Code " + resultCd, "timeout": charge_time, "fake": False}
+
             keepLoginInfo = account.get("keepLoginInfo")
             client.cookies.set("KeepLoginConfig", parse.quote(keepLoginInfo))
             login_result = client.post("https://m.cultureland.co.kr/mmb/loginProcess.do", data={"keepLoginInfo": keepLoginInfo})
@@ -134,7 +191,7 @@ def charge():
                 print(f"{Fore.CYAN}{Style.BRIGHT}[CHARGE FAILED] {id} | {'-'.join(pin)} | {charge_amount}원 | {charge_result} | {charge_time}ms | {current_date}{Style.RESET_ALL}")
             return {"result": bool(charge_amount), "amount": charge_amount, "reason": charge_result, "timeout": charge_time, "fake": False}
     else:
-        print(f"{Fore.CYAN}{Style.BRIGHT}[FAKE] {id} | {'-'.join(pin)} | {current_date}{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}{Style.BRIGHT}[FAKE 1] {id} | {'-'.join(pin)} | 0원 | 상품권 번호 불일치 | -1ms | {current_date}{Style.RESET_ALL}")
         return {"result": False, "amount": 0, "reason": "상품권 번호 불일치", "timeout": randrange(400, 500), "fake": True}
 
 @app.route("/api/gift", methods=["POST"])
