@@ -168,13 +168,11 @@ def charge():
                 print(f"{Fore.RED}{Style.BRIGHT}[LOGIN FAILED 1] {id}:{pw} | {current_date}{Style.RESET_ALL}")
                 return {"result": False, "amount": 0, "reason": "아이디 또는 비밀번호 불일치 (1)", "timeout": round((time() - current_time) * 1000), "fake": False}
 
-            if len(pin[3]) == 4:
-                client.get("https://m.cultureland.co.kr/csh/cshGiftCard.do")
-            elif len(pin[3]) == 6:
-                client.get("https://m.cultureland.co.kr/csh/cshGiftCardOnline.do")
-            else:
-                print(f"{Fore.RED}{Style.BRIGHT}[PIN Length {len(pin[3])}] {'-'.join(pin)} | {current_date}{Style.RESET_ALL}")
-                return {"result": False, "amount": 0, "reason": "상품권 번호 불일치", "timeout": randrange(400, 500), "fake": True}
+            pageURL = "https://m.cultureland.co.kr/csh/cshGiftCard.do"
+            if len(pin[3]) == 6:
+                pageURL = "https://m.cultureland.co.kr/csh/cshGiftCardOnline.do"
+
+            client.get(pageURL)
 
             mtk = mTransKey(client, "https://m.cultureland.co.kr/transkeyServlet")
             pin_encrypt = mtk.new_keypad("number", "txtScr14", "scr14", "password").encrypt_password(pin[3])
@@ -187,7 +185,6 @@ def charge():
             charge_result = client.get("https://m.cultureland.co.kr/csh/cshGiftCardCfrm.do")
 
             charge_amount = charge_result.text.split('walletChargeAmt" value="')[1].split("\n\n\n")[0]
-            print(charge_result.text)
             wallet_charge_amount = int(charge_amount.split('"')[0])
             charge_amount = wallet_charge_amount + int(charge_amount.split('value="')[1].split('"')[0])
 
