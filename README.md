@@ -1,3 +1,6 @@
+# UPDATE
+Please refer to [DollarNoob/Cultureland-API](https://github.com/DollarNoob/Cultureland-API)
+
 # Cultureland-AutoCharge
 A request-based Cultureland voucher charger.
 
@@ -15,4 +18,4 @@ fetch("http://127.0.0.1/api/charge", {"method": "POST", "body": JSON.stringify({
 mTranskey - https://github.com/Nua07/mTransKey
 
 # Contact
-https://t.me/DollarNoobKR
+https://t.me/DollarNoob
